@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3차시: 꼬마 화가의 마법 오케스트라 - 인터랙티브 교안</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #F0F9FF; color: #334155; }
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; height: 280px; }
+        .slide-content { min-height: 500px; }
+        
+        /* Custom UI Elements for Kandinsky Concept */
+        .k-shape { cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .k-shape:hover { transform: scale(1.15) rotate(5deg); filter: brightness(1.1); }
+        
+        .k-circle { width: 80px; height: 80px; background-color: #FF6B6B; border-radius: 50%; box-shadow: 0 4px 0 #C92A2A; }
+        .k-triangle { 
+            width: 0; height: 0; 
+            border-left: 45px solid transparent; border-right: 45px solid transparent; 
+            border-bottom: 80px solid #4DADF7; filter: drop-shadow(0 4px 0 #1864AB);
+        }
+        .k-line { width: 100px; height: 12px; background-color: #51CF66; border-radius: 6px; box-shadow: 0 4px 0 #2B8A3E; }
+
+        .concert-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .concert-card:hover { transform: translateY(-8px); border-color: #6366F1; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        .sound-wave {
+            border: 2px solid #6366F1;
+            border-radius: 50%;
+            position: absolute;
+            animation: ripple 1s linear infinite;
+        }
+        @keyframes ripple {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 200px; height: 200px; opacity: 0; }
+        }
+    </style>
+    <!-- Chosen Palette: Creative Sky (Sky Blue #F0F9FF) with Vibrant Art Accents (Red, Blue, Green, Purple). -->
+    <!-- Application Structure Plan: 
+         - Dashboard View: Focuses on the final lesson's time management and learning objectives.
+         - Interactive Slide Deck: 
+            1. Intro: Recap & Transition from Analog (Scanner) to Digital (Play Button).
+            2. Tool Deep Dive: Virtual Kandinsky simulator to explain shape-sound relationships.
+            3. Project Guidance: Step-by-step instructions for drawing 'Sound Gardens'.
+            4. Concert Workshop: Interactive cards for performance styles.
+            5. Sound Detective Game: A new peer-interaction game replacing the teacher performance.
+         - Teacher Script Overlay: Constant pedagogical support for the instructor.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white shadow-md border-b-4 border-blue-400 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-black text-blue-600 flex items-center">
+                <span class="text-3xl mr-3">🎨</span> [3차시] 꼬마 화가의 마법 오케스트라
+            </h1>
+            <div class="flex space-x-2">
+                <button id="overview-btn" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-full text-sm font-bold transition">수업 정보</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-5xl">
+        
+        <!-- Dashboard Section (Teacher Only) -->
+        <div id="overview-view" class="bg-white rounded-3xl shadow-2xl p-8 mb-10 hidden border-2 border-blue-100 animate-fade-in">
+            <div class="flex flex-col md:flex-row gap-8">
+                <div class="md:w-1/2">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">📋</span> 수업 핵심 포인트
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="bg-blue-50 p-5 rounded-2xl">
+                            <h3 class="font-bold text-blue-800 mb-1">오늘의 목표</h3>
+                            <p class="text-blue-900 text-sm">내가 그린 그림(입력)이 디지털 음악(출력)이 되는 과정을 경험하고 성취감을 느낍니다.</p>
+                        </div>
+                        <div class="bg-purple-50 p-5 rounded-2xl">
+                            <h3 class="font-bold text-purple-800 mb-1">핵심 도구</h3>
+                            <p class="text-purple-900 text-sm">크롬 뮤직랩 - 칸딘스키(Kandinsky)</p>
+                        </div>
+                        <div class="bg-orange-50 p-5 rounded-2xl">
+                            <h3 class="font-bold text-orange-800 mb-1">선생님 팁</h3>
+                            <p class="text-orange-900 text-sm">아이들이 그린 도형의 소리적 특성(높낮이, 길이)을 언어적으로 피드백해 주세요.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="md:w-1/2 flex flex-col items-center">
+                    <h3 class="font-bold text-gray-700 mb-4">90분 수업 흐름</h3>
+                    <div class="chart-container">
+                        <canvas id="timeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 text-center">
+                <button id="close-overview-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-10 rounded-full shadow-lg transition transform hover:scale-105">
+                    교안 화면으로 돌아가기
+                </button>
+            </div>
+        </div>
+
+        <!-- Interactive Slide Deck -->
+        <div id="slide-container" class="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col min-h-[650px] relative border border-gray-100">
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-100 h-2">
+                <div id="slide-progress" class="bg-gradient-to-r from-blue-400 to-purple-500 h-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+
+            <!-- Slide Content Area -->
+            <div id="slide-content" class="flex-grow p-10 flex flex-col items-center justify-center text-center slide-content">
+                <!-- JS will inject content here -->
+            </div>
+
+            <!-- Teacher Script (Expandable) -->
+            <div class="bg-gray-50 border-t border-gray-100">
+                <button onclick="toggleScript()" class="w-full px-6 py-3 flex justify-between items-center text-gray-500 hover:bg-gray-100 transition">
+                    <span class="text-xs font-black uppercase tracking-widest">🎓 선생님 발문 가이드</span>
+                    <span id="script-icon">▲</span>
+                </button>
+                <div id="teacher-script" class="px-8 pb-6 text-gray-700 text-lg leading-relaxed hidden">
+                    <!-- JS will inject script here -->
+                </div>
+            </div>
+
+            <!-- Navigation Controls -->
+            <div class="p-6 bg-white border-t border-gray-100 flex justify-between items-center">
+                <button id="prev-btn" class="px-6 py-3 rounded-2xl border-2 border-gray-200 text-gray-500 font-bold hover:bg-gray-50 disabled:opacity-30 transition">이전</button>
+                <div id="slide-number" class="text-gray-400 font-mono font-bold">1 / 10</div>
+                <button id="next-btn" class="px-8 py-3 rounded-2xl bg-gray-800 text-white font-bold hover:bg-gray-700 shadow-lg transition">다음 ▶</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Sound Effect Overlay (Visual only) -->
+    <div id="sound-visual" class="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0"></div>
+
+    <script>
+        // --- Slide Data ---
+        const lessonSlides = [
+            {
+                part: "도입",
+                title: "꼬마 화가의 마법 도화지 🌈",
+                content: `
+                    <div class="animate-float">
+                        <div class="text-9xl mb-6">🎨✨</div>
+                    </div>
+                    <p class="text-2xl font-medium text-gray-600">오늘은 우리가 그린 그림이<br><span class="text-blue-600 font-black">음악</span>으로 변하는 날이에요!</p>
+                `,
+                script: "친구들, 드디어 마지막 시간이에요! 오늘은 우리가 그리는 모든 것이 마법처럼 노래가 될 거예요. 준비됐나요?"
+            },
+            {
+                part: "복습/연결",
+                title: "봉 대신 '재생 버튼'! ▶️",
+                content: `
+                    <div class="flex flex-col items-center space-y-8">
+                        <div class="flex items-center space-x-4">
+                            <div class="p-4 bg-yellow-100 rounded-full text-4xl">🪄</div>
+                            <div class="text-4xl">➜</div>
+                            <div class="p-4 bg-blue-600 rounded-full text-4xl text-white shadow-xl animate-pulse">▶️</div>
+                        </div>
+                        <p class="text-xl text-gray-600 max-w-md">지난주에 우리가 <strong>스캐닝</strong> 했던 거 기억나죠?<br>이제 컴퓨터가 버튼 하나로 대신 해줄 거예요!</p>
+                    </div>
+                `,
+                script: "지난번엔 선생님이랑 지휘자 봉으로 하나하나 짚어봤죠? 이제는 이 재생 버튼만 누르면 컴퓨터가 마법처럼 쓱~ 읽어줄 거예요. 아주 편리해졌죠?"
+            },
+            {
+                part: "도구 설명",
+                title: "도형의 목소리를 들어봐요! 👂",
+                content: `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mt-6">
+                        <div class="flex flex-col items-center space-y-4" onclick="playEffect('circle')">
+                            <div class="k-shape k-circle"></div>
+                            <h4 class="font-bold text-red-500">동그라미</h4>
+                            <p class="text-sm text-gray-400">높고 귀여운 소리</p>
+                        </div>
+                        <div class="flex flex-col items-center space-y-4" onclick="playEffect('triangle')">
+                            <div class="k-shape k-triangle"></div>
+                            <h4 class="font-bold text-blue-500">세모</h4>
+                            <p class="text-sm text-gray-400">찰랑찰랑 타악기</p>
+                        </div>
+                        <div class="flex flex-col items-center space-y-4" onclick="playEffect('line')">
+                            <div class="k-shape k-line"></div>
+                            <h4 class="font-bold text-green-500">선</h4>
+                            <p class="text-sm text-gray-400">길게 노래하는 소리</p>
+                        </div>
+                    </div>
+                `,
+                script: "도형마다 목소리가 달라요. 동그라미는 '안녕?' 하고 높은 목소리를 내고, 세모는 '챙챙~' 하고 장난을 쳐요. 선은 '으음~' 하고 노래를 부르죠. 여러분은 어떤 도형 목소리가 가장 궁금한가요?"
+            },
+            {
+                part: "도구 설명",
+                title: "마법 옷을 갈아입어요 👗",
+                content: `
+                    <div class="flex flex-col items-center space-y-6">
+                        <div class="flex space-x-4">
+                            <div class="w-16 h-16 bg-pink-400 rounded-full border-4 border-white shadow-md"></div>
+                            <div class="w-16 h-16 bg-blue-400 rounded-full border-4 border-white shadow-md"></div>
+                            <div class="w-16 h-16 bg-orange-400 rounded-full border-4 border-white shadow-md"></div>
+                        </div>
+                        <div class="text-6xl">🎻 ➜ 🎷 ➜ 🥁</div>
+                        <p class="text-xl font-bold text-purple-600">색깔 버튼을 누르면 악기가 변해요!</p>
+                    </div>
+                `,
+                script: "그림을 다 그렸다면 아래에 있는 색깔들을 눌러보세요. 피아노 소리가 바이올린으로, 또 신나는 드럼 소리로 변신해요! 어떤 옷이 가장 어울릴지 골라보세요."
+            },
+            {
+                part: "프로젝트",
+                title: "오늘의 미션: 소리 정원 그리기 🌸",
+                content: `
+                    <div class="bg-gray-50 p-8 rounded-3xl border-2 border-dashed border-gray-200 w-full max-w-2xl">
+                        <div class="grid grid-cols-2 gap-6 text-left">
+                            <div class="space-y-2">
+                                <h4 class="font-black text-blue-500">주제 1</h4>
+                                <p class="font-bold">우리 가족의<br>웃음소리 정원</p>
+                            </div>
+                            <div class="space-y-2">
+                                <h4 class="font-black text-pink-500">주제 2</h4>
+                                <p class="font-bold">숲속 동물들의<br>왁자지껄 잔치</p>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                script: "이제 여러분만의 소리 정원을 만들어볼 시간이에요! 가족들이 웃는 모습이나 숲속 동물들이 노는 모습을 상상하며 도화지를 꽉 채워볼까요?"
+            },
+            {
+                part: "활동 안내",
+                title: "아이패드 사용 방법 📱",
+                content: `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-4 bg-white shadow rounded-xl">
+                            <span class="text-2xl block mb-2">1️⃣</span>
+                            <p class="text-sm">손가락으로<br><strong>그림 그리기</strong></p>
+                        </div>
+                        <div class="p-4 bg-white shadow rounded-xl">
+                            <span class="text-2xl block mb-2">2️⃣</span>
+                            <p class="text-sm">실수하면<br><strong>뒤로가기(↩️)</strong></p>
+                        </div>
+                        <div class="p-4 bg-white shadow rounded-xl">
+                            <span class="text-2xl block mb-2">3️⃣</span>
+                            <p class="text-sm">완성되면<br><strong>재생(▶️) 클릭</strong></p>
+                        </div>
+                    </div>
+                `,
+                script: "아이패드를 받으면 먼저 그림을 그려요. 틀려도 괜찮아요! 화살표 버튼을 누르면 다시 그릴 수 있어요. 다 그린 친구는 재생 버튼을 꾹!"
+            },
+            {
+                part: "정리/음악회",
+                title: "🥁 우리들의 소리 음악회",
+                content: `
+                    <div class="grid grid-cols-2 gap-6 w-full">
+                        <div class="concert-card p-6 bg-red-50 rounded-2xl" onclick="showConcertDetail(0)">
+                            <div class="text-4xl mb-3">🤝</div>
+                            <h4 class="font-bold text-red-700">이어달리기 음악회</h4>
+                        </div>
+                        <div class="concert-card p-6 bg-blue-50 rounded-2xl" onclick="showConcertDetail(1)">
+                            <div class="text-4xl mb-3">🎤</div>
+                            <h4 class="font-bold text-blue-700">이야기 음악회</h4>
+                        </div>
+                        <div class="concert-card p-6 bg-green-50 rounded-2xl" onclick="showConcertDetail(2)">
+                            <div class="text-4xl mb-3">💃</div>
+                            <h4 class="font-bold text-green-700">댄스 음악회</h4>
+                        </div>
+                        <div class="concert-card p-6 bg-purple-50 rounded-2xl" onclick="showConcertDetail(3)">
+                            <div class="text-4xl mb-3">📸</div>
+                            <h4 class="font-bold text-purple-700">전시회 음악회</h4>
+                        </div>
+                    </div>
+                    <div id="concert-detail" class="mt-6 p-4 bg-gray-800 text-white rounded-xl hidden"></div>
+                `,
+                script: "자! 멋진 작품이 완성되었네요. 이제 우리 다 같이 음악회를 열어볼까요? 어떤 음악회를 하고 싶나요?"
+            },
+            {
+                part: "활동",
+                title: "🔍 마법 소리 탐정단! (게임)",
+                content: `
+                    <div class="flex flex-col items-center space-y-6">
+                        <div class="text-7xl">🕵️‍♂️🔎</div>
+                        <div class="bg-blue-50 p-6 rounded-2xl border-2 border-blue-200 w-full max-w-lg">
+                            <h4 class="font-bold text-blue-800 mb-2">어떤 마법 도형이 숨어있을까?</h4>
+                            <ol class="text-left text-sm space-y-3 text-gray-700">
+                                <li>1. 친구 한 명이 소리만 들려줘요 (화면은 비밀!)</li>
+                                <li>2. 나머지 친구들은 귀를 쫑긋 세우고 들어요.</li>
+                                <li>3. <strong>"어떤 도형 소리가 가장 많이 들렸나요?"</strong> 맞혀봐요!</li>
+                            </ol>
+                        </div>
+                        <div class="flex space-x-4 opacity-50">
+                            <span class="text-3xl">⭐</span> <span class="text-3xl">●</span> <span class="text-3xl">▲</span>
+                        </div>
+                    </div>
+                `,
+                script: "이번엔 우리가 마법 소리 탐정단이 되어볼 거예요! 친구가 어떤 도형을 많이 그렸는지 소리만 듣고 맞혀보는 거예요. 귀를 아주 크게 열고 들어야겠죠?"
+            },
+            {
+                part: "마무리",
+                title: "우리는 꼬마 코딩 예술가! 🎓",
+                content: `
+                    <div class="text-center">
+                        <div class="text-9xl mb-6 animate-bounce">🏆</div>
+                        <h2 class="text-4xl font-black text-gray-800">축하합니다!</h2>
+                        <p class="text-xl mt-4">3주간의 코딩 여행을 마쳤어요.</p>
+                    </div>
+                `,
+                script: "친구들, 3주 동안 정말 대단했어요! 소리와 색깔, 그리고 코딩으로 멋진 예술을 만들었죠? 여러분은 이제 정말 멋진 코딩 예술가예요!"
+            },
+            {
+                part: "인사",
+                title: "다음에 또 만나요! 👋",
+                content: `
+                    <div class="text-center animate-float">
+                        <div class="text-8xl text-pink-500">💖</div>
+                        <p class="text-2xl font-bold mt-6 text-gray-700">코딩이랑 친해져서 반가웠어!</p>
+                    </div>
+                `,
+                script: "오늘 만든 마법 음악 잊지 마세요! 다음에 또 재미있는 코딩 놀이로 만나요. 모두 안녕!"
+            }
+        ];
+
+        // --- State ---
+        let currentSlide = 0;
+
+        // --- Init ---
+        window.onload = () => {
+            initChart();
+            renderSlide();
+            
+            document.getElementById('next-btn').onclick = next;
+            document.getElementById('prev-btn').onclick = prev;
+            document.getElementById('overview-btn').onclick = () => toggleView('overview-view', true);
+            document.getElementById('close-overview-btn').onclick = () => toggleView('overview-view', false);
+        };
+
+        // --- Functions ---
+        function renderSlide() {
+            const data = lessonSlides[currentSlide];
+            const content = document.getElementById('slide-content');
+            const script = document.getElementById('teacher-script');
+            const num = document.getElementById('slide-number');
+            const progress = document.getElementById('slide-progress');
+
+            content.style.opacity = 0;
+            setTimeout(() => {
+                content.innerHTML = `
+                    <p class="text-xs font-black text-blue-400 mb-2 uppercase tracking-widest">${data.part}</p>
+                    <h2 class="text-3xl font-black text-gray-800 mb-10">${data.title}</h2>
+                    ${data.content}
+                `;
+                script.innerHTML = data.script;
+                num.innerText = `${currentSlide + 1} / ${lessonSlides.length}`;
+                progress.style.width = `${((currentSlide + 1) / lessonSlides.length) * 100}%`;
+                content.style.opacity = 1;
+            }, 200);
+
+            document.getElementById('prev-btn').disabled = currentSlide === 0;
+            document.getElementById('next-btn').innerText = currentSlide === lessonSlides.length - 1 ? "종료" : "다음 ▶";
+        }
+
+        function next() {
+            if (currentSlide < lessonSlides.length - 1) {
+                currentSlide++;
+                renderSlide();
+            }
+        }
+
+        function prev() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                renderSlide();
+            }
+        }
+
+        function toggleView(id, show) {
+            document.getElementById(id).style.display = show ? 'block' : 'none';
+        }
+
+        function toggleScript() {
+            const el = document.getElementById('teacher-script');
+            const icon = document.getElementById('script-icon');
+            const isHidden = el.classList.contains('hidden');
+            el.classList.toggle('hidden');
+            icon.innerText = isHidden ? '▼' : '▲';
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('timeChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['도입 (10분)', '도구 탐색 (20분)', '메인 작업 (30분)', '음악회/게임 (30분)'],
+                    datasets: [{
+                        data: [10, 20, 30, 30],
+                        backgroundColor: ['#E2E8F0', '#60A5FA', '#F472B6', '#818CF8'],
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function playEffect(type) {
+            const visual = document.getElementById('sound-visual');
+            const ripple = document.createElement('div');
+            ripple.className = 'sound-wave';
+            visual.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 1000);
+        }
+
+        function showConcertDetail(index) {
+            const details = [
+                "1번 친구가 연주를 마치면, 2번 친구가 바로 재생 버튼을 눌러요!",
+                "나의 그림에 어떤 이야기가 숨어있는지 친구들에게 설명해 줘요.",
+                "친구의 음악 리듬에 맞춰 자유롭게 몸을 흔들어봐요!",
+                "서로의 패드를 감상하며 교실을 자유롭게 돌아다녀요."
+            ];
+            const el = document.getElementById('concert-detail');
+            el.innerHTML = `<p class='text-xs'>✨ 방법: ${details[index]}</p>`;
+            el.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
