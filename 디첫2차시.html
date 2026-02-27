@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2차시: 마법 기호로 지휘해요! - 인터랙티브 수업 도구</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #FDFBF7; color: #4A4A4A; }
+        .slide-transition { transition: opacity 0.5s ease-in-out; }
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; height: 300px; }
+        
+        /* Custom shapes for non-SVG graphics */
+        .shape-star { color: #FFD700; text-shadow: 2px 2px 0px #DAA520; font-size: 5rem; }
+        .shape-circle { color: #FF6B6B; text-shadow: 2px 2px 0px #C92A2A; font-size: 5rem; }
+        .shape-triangle { color: #4DADF7; text-shadow: 2px 2px 0px #1864AB; font-size: 5rem; }
+        
+        .train-car {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .train-car:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .train-car.active-scan { border-color: #F59F00; background-color: #FFF9DB; transform: scale(1.1); }
+        
+        .teacher-note {
+            background-color: #F8F9FA;
+            border-left: 4px solid #FCC419;
+            font-style: italic;
+        }
+        
+        /* Animation classes */
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        .animate-bounce-custom { animation: bounce 1s infinite; }
+        
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 130, 130, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 130, 130, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 130, 130, 0); }
+        }
+        .pulse-effect { animation: pulse-ring 2s infinite; }
+    </style>
+    <!-- Chosen Palette: Warm Neutrals (Cream/Beige #FDFBF7) with Playful Accents (Yellow, Red, Blue) for children's engagement. -->
+    <!-- Application Structure Plan: The app is designed as a "Digital Teacher's Dashboard & Presentation Tool". 
+         Structure:
+         1. Overview Dashboard: Shows the time distribution (Chart.js) and lesson goal (from Report Part 1).
+         2. Interactive Slide Deck: Sequentially follows the PPT guide (Parts 1-6). 
+            - Includes interactive elements for "Quiz" (Part 2), "Sticker Board" (Part 3), and "Scanning Demo" (Part 5) to replace static slides with active learning tools.
+         3. Teacher Controls: Always visible notes/scripts from the report to guide the instructor.
+         Why: This structure allows the teacher to manage the 90-minute class flow while projecting engaging visuals for the 6-year-old students. -->
+    <!-- Visualization & Content Choices:
+         1. Time Distribution Chart (Doughnut): Visualize the 90-min breakdown (Intro, Dev 1, Dev 2, Break, Closing) to help the teacher manage pacing.
+         2. Interactive Symbol Cards: Replace static images with clickable cards to reveal meanings (Part 2).
+         3. Random Symbol Generator: Gamifies Slide 8 (Quiz) for engagement.
+         4. Digital Sticker Train: Implements Slide 9-10 as a drag-and-drop style interface. NO SVG used, just CSS styled divs.
+         5. Scanning Animation: Visually demonstrates the "Baton" concept (Slide 12) using CSS class switching via JS. 
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Navigation / Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-gray-800 flex items-center">
+                <span class="text-2xl mr-2">🎵</span> [2차시] 마법 기호로 지휘해요!
+            </h1>
+            <div class="flex items-center space-x-4">
+                <div class="hidden md:block text-sm text-gray-500">
+                    진행률: <span id="progress-text">0%</span>
+                </div>
+                <div class="w-32 bg-gray-200 rounded-full h-2.5 hidden md:block">
+                    <div id="progress-bar" class="bg-yellow-400 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <button id="overview-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded text-sm font-medium transition">
+                    수업 개요 보기
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow flex flex-col items-center justify-center p-4 w-full max-w-5xl mx-auto">
+        
+        <!-- Dashboard / Overview View (Hidden by default) -->
+        <div id="overview-view" class="w-full hidden animate-fade-in">
+            <div class="bg-white rounded-2xl shadow-lg p-8 mb-6">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">수업 개요 및 시간 계획</h2>
+                <p class="mb-6 text-gray-600">
+                    이 섹션은 선생님을 위한 수업 로드맵입니다. 총 90분의 수업이 어떻게 구성되어 있는지 한눈에 파악하고, 각 단계별 시간 배분을 확인할 수 있습니다.
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div class="space-y-4">
+                        <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-100">
+                            <h3 class="font-bold text-yellow-800 mb-2">학습 목표</h3>
+                            <ul class="list-disc list-inside text-gray-700 space-y-1">
+                                <li><strong>기호(Symbol):</strong> 그림이나 스티커가 동작을 나타내는 '약속'임을 이해합니다.</li>
+                                <li><strong>스캐닝(Scanning):</strong> 왼쪽에서 오른쪽으로 코드를 읽는 규칙을 익힙니다.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                            <h3 class="font-bold text-blue-800 mb-2">준비물</h3>
+                            <p class="text-gray-700">지휘자 봉(막대기), 8칸 기차 활동지, 스티커(별, 동그라미, 세모)</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center">
+                        <h3 class="font-bold text-gray-700 mb-2">시간 배분 (총 90분)</h3>
+                        <div class="chart-container">
+                            <canvas id="timeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 text-center">
+                    <button id="start-lesson-btn" class="bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 text-lg">
+                        수업 시작하기 ▶
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide Presentation View -->
+        <div id="slide-view" class="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden min-h-[600px] flex flex-col relative">
+            
+            <!-- Slide Content -->
+            <div id="slide-content" class="flex-grow p-8 flex flex-col items-center justify-center text-center">
+                <!-- Content injected via JS -->
+            </div>
+
+            <!-- Teacher Script / Guide Area (Collapsible) -->
+            <div class="bg-gray-50 border-t border-gray-200 p-4">
+                <div class="flex justify-between items-center cursor-pointer" onclick="toggleScript()">
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide">🎓 선생님 가이드 (클릭하여 열기/접기)</h3>
+                    <span id="script-toggle-icon" class="text-gray-400">▼</span>
+                </div>
+                <div id="teacher-script-container" class="mt-2 text-left bg-white p-4 rounded border border-gray-200 shadow-sm text-gray-700 text-lg leading-relaxed hidden">
+                    <!-- Script injected via JS -->
+                </div>
+            </div>
+
+            <!-- Slide Navigation Controls -->
+            <div class="bg-gray-100 p-4 flex justify-between items-center border-t border-gray-200">
+                <button id="prev-btn" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium">
+                    ◀ 이전
+                </button>
+                <span id="slide-indicator" class="font-mono text-gray-500 text-sm">1 / 17</span>
+                <button id="next-btn" class="bg-gray-800 text-white px-6 py-2 rounded-lg hover:bg-gray-700 font-medium">
+                    다음 ▶
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-white py-4 text-center text-gray-400 text-sm border-t border-gray-100">
+        &copy; 2026 Kids Coding Lab | Canvas Interactive Lesson
+    </footer>
+
+    <script>
+        // --- Data: Lesson Plan Content (Based on Lesson 2 PPT Guide) ---
+        const lessonData = [
+            // Part 1: Intro
+            {
+                part: "도입 (10분)",
+                title: "마법 기호로 지휘해요! 🎵",
+                type: "hero",
+                content: `
+                    <div class="space-y-6 animate-bounce-custom">
+                        <div class="text-6xl">🎩🎼</div>
+                        <p class="text-xl text-gray-600">오늘 우리는 멋진 <strong>지휘자</strong>가 될 거예요!</p>
+                    </div>
+                `,
+                script: "안녕 친구들! 오늘은 우리가 멋진 지휘자가 되어 볼 거예요! 모두 준비됐나요?"
+            },
+            {
+                part: "도입",
+                title: "우리들의 약속 🤙",
+                type: "info",
+                content: `
+                    <div class="grid grid-cols-2 gap-8 w-full max-w-2xl mt-4">
+                        <div class="bg-green-50 p-6 rounded-2xl border-2 border-green-200 flex flex-col items-center">
+                            <div class="text-5xl mb-4">👂</div>
+                            <h3 class="text-xl font-bold text-green-700">친구 말 경청하기</h3>
+                        </div>
+                        <div class="bg-green-50 p-6 rounded-2xl border-2 border-green-200 flex flex-col items-center">
+                            <div class="text-5xl mb-4">🤲</div>
+                            <h3 class="text-xl font-bold text-green-700">도구 소중히 다루기</h3>
+                        </div>
+                    </div>
+                `,
+                script: "코딩 예술가가 되기 위해 꼭 지켜야 할 약속이 있어요. 친구가 말할 땐 귀를 쫑긋! 교구는 살살 다뤄주세요."
+            },
+            {
+                part: "도입",
+                title: "지난 시간 복습: 리듬 기차 🚂",
+                type: "info",
+                content: `
+                    <div class="text-center">
+                        <div class="flex justify-center items-center space-x-2 mb-6">
+                            <div class="w-16 h-16 bg-red-400 rounded-lg shadow-md flex items-center justify-center text-white font-bold">빨</div>
+                            <div class="text-2xl text-gray-300">➜</div>
+                            <div class="w-16 h-16 bg-yellow-400 rounded-lg shadow-md flex items-center justify-center text-white font-bold">노</div>
+                            <div class="text-2xl text-gray-300">➜</div>
+                            <div class="w-16 h-16 bg-blue-400 rounded-lg shadow-md flex items-center justify-center text-white font-bold">파</div>
+                        </div>
+                        <p class="text-lg">기차 칸에 색깔을 <strong>순서대로</strong> 태웠던 것 기억나나요?</p>
+                    </div>
+                `,
+                script: "순서대로 칙칙폭폭! 지난번엔 색깔 기차를 만들었죠? 오늘은 더 특별한 걸 실어볼 거예요."
+            },
+            // Part 2: Development 1
+            {
+                part: "전개 1: 기호의 이해 (20분)",
+                title: "기호가 뭐예요? 🤔",
+                type: "interaction",
+                content: `
+                    <div class="flex flex-col items-center">
+                        <div class="bg-gray-800 p-4 rounded-xl mb-4 w-24 flex flex-col items-center gap-2 shadow-lg">
+                            <div class="w-16 h-16 bg-red-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.6)]"></div>
+                            <div class="w-16 h-16 bg-gray-600 rounded-full opacity-30"></div>
+                            <div class="w-16 h-16 bg-gray-600 rounded-full opacity-30"></div>
+                        </div>
+                        <p class="text-xl font-bold mt-4">빨간불을 보면 멈춰요! ✋</p>
+                        <p class="text-gray-500 mt-2">그림으로 약속한 것을 '기호'라고 해요.</p>
+                    </div>
+                `,
+                script: "신호등의 빨간색을 보면 우리는 어떻게 하죠? (멈춰요!) 맞아요. 그림으로 약속한 것을 '기호'라고 해요."
+            },
+            {
+                part: "전개 1",
+                title: "우리 반 마법 기호 1: 별 ⭐",
+                type: "card",
+                content: `
+                    <div class="p-10 bg-yellow-50 border-4 border-yellow-300 rounded-3xl flex flex-col items-center shadow-lg transform hover:scale-105 transition duration-300">
+                        <div class="shape-star mb-4">⭐</div>
+                        <h2 class="text-3xl font-bold text-yellow-600">반짝반짝</h2>
+                        <p class="text-gray-500 mt-2">손을 흔들어주세요!</p>
+                    </div>
+                `,
+                script: "자, 우리 반만의 약속! 이제부터 이 별을 보면 손을 반짝반짝 흔드는 거예요!"
+            },
+            {
+                part: "전개 1",
+                title: "우리 반 마법 기호 2: 동그라미 ●",
+                type: "card",
+                content: `
+                    <div class="p-10 bg-red-50 border-4 border-red-300 rounded-3xl flex flex-col items-center shadow-lg transform hover:scale-105 transition duration-300">
+                        <div class="shape-circle mb-4">●</div>
+                        <h2 class="text-3xl font-bold text-red-600">짝!</h2>
+                        <p class="text-gray-500 mt-2">박수를 한 번 쳐요!</p>
+                    </div>
+                `,
+                script: "동그라미를 보면 어떻게 할까요? 짝! 하고 박수를 한 번 쳐주세요."
+            },
+            {
+                part: "전개 1",
+                title: "우리 반 마법 기호 3: 세모 ▲",
+                type: "card",
+                content: `
+                    <div class="p-10 bg-blue-50 border-4 border-blue-300 rounded-3xl flex flex-col items-center shadow-lg transform hover:scale-105 transition duration-300">
+                        <div class="shape-triangle mb-4">▲</div>
+                        <h2 class="text-3xl font-bold text-blue-600">쿵!</h2>
+                        <p class="text-gray-500 mt-2">발을 한 번 굴러요!</p>
+                    </div>
+                `,
+                script: "마지막 세모는? 쿵! 하고 발을 굴러주세요."
+            },
+            {
+                part: "전개 1",
+                title: "🧙‍♂️ 마법사 퀴즈 게임!",
+                type: "game-quiz",
+                content: `
+                    <div class="text-center w-full">
+                        <div id="quiz-display" class="h-64 flex items-center justify-center mb-8 border-4 border-dashed border-gray-300 rounded-3xl bg-gray-50">
+                            <span class="text-gray-400 text-xl">버튼을 눌러 기호를 뽑으세요!</span>
+                        </div>
+                        <button onclick="playQuiz()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-10 rounded-full shadow-lg text-xl transition transform hover:-translate-y-1">
+                            🎲 기호 뽑기!
+                        </button>
+                    </div>
+                `,
+                script: "자, 선생님이 보여주는 기호를 보고 몸으로 대답해 보세요! 준비~ 시작!"
+            },
+            // Part 3: Development 2
+            {
+                part: "전개 2: 스티커 코딩 (30분)",
+                title: "나만의 마법 악보 만들기 🎼",
+                type: "interaction-coding",
+                content: `
+                    <div class="w-full max-w-3xl">
+                        <p class="text-center mb-4 text-gray-500">아래의 빈 기차 칸을 클릭해서 마법 기호를 넣어보세요.</p>
+                        
+                        <!-- Train Display -->
+                        <div class="flex justify-center space-x-2 mb-8 bg-gray-200 p-4 rounded-xl overflow-x-auto">
+                            <div class="flex space-x-2" id="sticker-train-container">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Sticker Palette -->
+                        <div class="flex justify-center space-x-8">
+                            <button onclick="setStickerTool('⭐')" class="flex flex-col items-center p-4 bg-white rounded-xl shadow border hover:bg-yellow-50 focus:ring-4 ring-yellow-300">
+                                <span class="text-4xl">⭐</span>
+                                <span class="text-sm font-bold mt-2">반짝반짝</span>
+                            </button>
+                            <button onclick="setStickerTool('●')" class="flex flex-col items-center p-4 bg-white rounded-xl shadow border hover:bg-red-50 focus:ring-4 ring-red-300">
+                                <span class="text-4xl text-red-500">●</span>
+                                <span class="text-sm font-bold mt-2">짝!</span>
+                            </button>
+                            <button onclick="setStickerTool('▲')" class="flex flex-col items-center p-4 bg-white rounded-xl shadow border hover:bg-blue-50 focus:ring-4 ring-blue-300">
+                                <span class="text-4xl text-blue-500">▲</span>
+                                <span class="text-sm font-bold mt-2">쿵!</span>
+                            </button>
+                            <button onclick="setStickerTool(null)" class="flex flex-col items-center p-4 bg-white rounded-xl shadow border hover:bg-gray-100 focus:ring-4 ring-gray-300">
+                                <span class="text-4xl text-gray-400">🗑️</span>
+                                <span class="text-sm font-bold mt-2">지우개</span>
+                            </button>
+                        </div>
+                        <div class="text-center mt-4 font-bold text-lg text-purple-600" id="current-tool-display">선택된 도구: 없음</div>
+                    </div>
+                `,
+                script: "여러분의 도화지 기차에 별, 세모, 동그라미 스티커를 마음껏 붙여보세요. 이게 바로 '코딩'이에요!"
+            },
+            {
+                part: "전개 2",
+                title: "주의할 점! ⬅️ ➡️",
+                type: "info",
+                content: `
+                    <div class="flex flex-col items-center space-y-6">
+                        <div class="text-8xl text-purple-500">🚂 💨 💨</div>
+                        <div class="w-full h-4 bg-gray-200 rounded-full relative overflow-hidden max-w-md">
+                            <div class="absolute top-0 left-0 h-full bg-purple-500 animate-[width_2s_infinite] w-full origin-left"></div>
+                        </div>
+                        <h3 class="text-2xl font-bold">왼쪽에서 오른쪽으로!</h3>
+                        <p class="text-gray-600">기차는 머리부터 출발하죠? 우리도 앞에서부터 채워요.</p>
+                    </div>
+                `,
+                script: "기차는 머리부터 출발하죠? 우리도 왼쪽부터 스티커를 붙여볼까요?"
+            },
+            // Part 4: Break
+            {
+                part: "휴식 (10분)",
+                title: "잠깐 쉬어가는 시간 🍵",
+                type: "break",
+                content: `
+                    <div class="flex flex-col items-center justify-center h-full">
+                        <div class="text-8xl mb-6 animate-bounce">🧘</div>
+                        <h2 class="text-3xl font-bold text-green-600">기지개 쭉쭉!</h2>
+                        <p class="text-xl mt-4">화장실도 다녀오고 물도 마셔요.</p>
+                    </div>
+                `,
+                script: "자, 우리 모두 기지개를 켜볼까요? 화장실 다녀올 친구는 다녀오세요."
+            },
+            // Part 5: Summary/Action
+            {
+                part: "정리 및 실행 (20분)",
+                title: "지휘자 봉의 마법 (스캐닝) 🪄",
+                type: "demo-scan",
+                content: `
+                    <div class="w-full max-w-3xl text-center">
+                        <p class="mb-6 text-gray-600">지휘자 봉(노란색 불빛)이 지나가는 곳의 소리를 내보세요!</p>
+                        
+                        <!-- Scanning Demo Train -->
+                        <div class="flex justify-center space-x-2 mb-8 bg-gray-800 p-6 rounded-xl overflow-x-auto shadow-inner" id="scan-demo-container">
+                            <!-- Populated with current train state or default -->
+                        </div>
+
+                        <button onclick="startScanning()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg text-xl flex items-center justify-center mx-auto">
+                            ▶️ 연주 시작 (스캐닝)
+                        </button>
+                    </div>
+                `,
+                script: "컴퓨터가 코드를 읽는 걸 '스캐닝'이라고 해요. 우리도 지휘자 봉으로 기호를 하나씩 짚으며 마법을 풀어볼까요?"
+            },
+            {
+                part: "정리 및 실행",
+                title: "꼬마 지휘자 연주회 🎻",
+                type: "info",
+                content: `
+                    <div class="grid grid-cols-2 gap-4 max-w-2xl w-full">
+                        <div class="bg-purple-50 p-6 rounded-xl border border-purple-200 text-center">
+                            <div class="text-4xl mb-2">🙋</div>
+                            <h3 class="font-bold">지휘자</h3>
+                            <p class="text-sm">봉으로 친구의 악보를 짚어줘요.</p>
+                        </div>
+                        <div class="bg-orange-50 p-6 rounded-xl border border-orange-200 text-center">
+                            <div class="text-4xl mb-2">💃</div>
+                            <h3 class="font-bold">연주자</h3>
+                            <p class="text-sm">봉이 가리키는 기호를 몸으로 표현해요.</p>
+                        </div>
+                    </div>
+                `,
+                script: "내가 지휘하면 친구가 움직이고, 친구가 지휘하면 내가 움직여요! 서로 역할을 바꿔봐요."
+            },
+            {
+                part: "정리 및 실행",
+                title: "오류가 났을 땐? (디버깅) 🔧",
+                type: "info",
+                content: `
+                    <div class="flex flex-col items-center">
+                        <div class="text-6xl mb-4">🤖💦</div>
+                        <h3 class="text-2xl font-bold text-gray-800">"어? 동작이 틀렸어요!"</h3>
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mt-6 w-full max-w-md">
+                            <ul class="text-left space-y-4">
+                                <li class="flex items-center">
+                                    <span class="text-green-500 mr-2">✔</span> 지휘자 봉을 <strong>천천히</strong> 움직여주세요.
+                                </li>
+                                <li class="flex items-center">
+                                    <span class="text-green-500 mr-2">✔</span> 친구가 다시 할 수 있게 <strong>기다려</strong> 주세요.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                script: "친구가 동작을 틀렸나요? 괜찮아요! 지휘자 봉을 조금 더 천천히 움직여주면 해결돼요!"
+            },
+            // Part 6: Conclusion
+            {
+                part: "마무리 (10분)",
+                title: "오늘 배운 것 정리 📝",
+                type: "info",
+                content: `
+                    <div class="space-y-6 w-full max-w-xl">
+                        <div class="bg-yellow-100 p-4 rounded-lg flex items-center">
+                            <div class="bg-white p-2 rounded-full mr-4 text-2xl">🖼️</div>
+                            <div>
+                                <h4 class="font-bold text-yellow-800">기호 (Symbol)</h4>
+                                <p class="text-sm text-yellow-900">그림으로 한 약속 (별=반짝반짝)</p>
+                            </div>
+                        </div>
+                        <div class="bg-green-100 p-4 rounded-lg flex items-center">
+                            <div class="bg-white p-2 rounded-full mr-4 text-2xl">👀</div>
+                            <div>
+                                <h4 class="font-bold text-green-800">스캐닝 (Scanning)</h4>
+                                <p class="text-sm text-green-900">왼쪽에서 오른쪽으로 읽기</p>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                script: "그림으로 약속하는 걸 뭐라고 했죠? (기호!) 차례대로 읽는 건요? (스캐닝!) 참 잘했어요!"
+            },
+            {
+                part: "마무리",
+                title: "다음 시간 예고: 그림이 음악으로! 🎨🎹",
+                type: "hero",
+                content: `
+                    <div class="text-center">
+                        <div class="text-8xl mb-6">🌈</div>
+                        <p class="text-xl">다음 주에는 내가 그린 그림이<br><strong>진짜 노래가 되는 마법</strong>을 부릴 거예요.</p>
+                    </div>
+                `,
+                script: "다음에는 우리가 직접 그린 그림이 진짜 노래가 되는 마법을 부려볼 거예요. 기대되나요?"
+            },
+            {
+                part: "마무리",
+                title: "안녕! 다음에 또 만나요 👋",
+                type: "hero",
+                content: `
+                    <div class="text-center animate-bounce-custom">
+                        <div class="text-8xl text-pink-500">💖</div>
+                        <h2 class="text-3xl font-bold mt-6 text-gray-700">최고의 코딩 예술가들!</h2>
+                    </div>
+                `,
+                script: "다음에 또 만나요, 꼬마 코딩 예술가들! 안녕!"
+            }
+        ];
+
+        // --- State Management ---
+        let currentSlideIndex = 0;
+        let selectedStickerTool = null;
+        let stickerTrainState = [null, null, null, null, null, null, null, null]; // 8 slots
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initOverviewChart();
+            renderSlide(currentSlideIndex);
+            
+            // Event Listeners
+            document.getElementById('next-btn').addEventListener('click', nextSlide);
+            document.getElementById('prev-btn').addEventListener('click', prevSlide);
+            document.getElementById('start-lesson-btn').addEventListener('click', () => {
+                document.getElementById('overview-view').classList.add('hidden');
+                document.getElementById('slide-view').classList.remove('hidden');
+                renderSlide(0);
+            });
+            document.getElementById('overview-btn').addEventListener('click', () => {
+                document.getElementById('slide-view').classList.add('hidden');
+                document.getElementById('overview-view').classList.remove('hidden');
+            });
+        });
+
+        // --- Overview Chart (Chart.js) ---
+        function initOverviewChart() {
+            const ctx = document.getElementById('timeChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['도입 (10분)', '기호 이해 (20분)', '스티커 코딩 (30분)', '휴식 (10분)', '정리/실행 (20분)'],
+                    datasets: [{
+                        data: [10, 20, 30, 10, 20],
+                        backgroundColor: ['#E5E7EB', '#FCD34D', '#F87171', '#93C5FD', '#34D399'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 20 } }
+                    }
+                }
+            });
+        }
+
+        // --- Slide Rendering Engine ---
+        function renderSlide(index) {
+            const slide = lessonData[index];
+            const contentDiv = document.getElementById('slide-content');
+            const scriptDiv = document.getElementById('teacher-script-container');
+            const indicator = document.getElementById('slide-indicator');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+
+            // Fade out
+            contentDiv.classList.add('opacity-0', 'slide-transition');
+            
+            setTimeout(() => {
+                // Update Content
+                contentDiv.innerHTML = `<h2 class="text-3xl font-bold mb-2 text-gray-800">${slide.title}</h2><p class="text-sm text-gray-400 mb-8 uppercase tracking-widest">${slide.part}</p>${slide.content}`;
+                scriptDiv.innerHTML = slide.script;
+                
+                // Update Navigation
+                indicator.innerText = `${index + 1} / ${lessonData.length}`;
+                document.getElementById('prev-btn').disabled = index === 0;
+                document.getElementById('next-btn').innerText = index === lessonData.length - 1 ? "수업 종료" : "다음 ▶";
+                
+                // Update Progress
+                const percent = Math.round(((index + 1) / lessonData.length) * 100);
+                progressBar.style.width = `${percent}%`;
+                progressText.innerText = `${percent}%`;
+
+                // Re-initialize dynamic elements if they exist
+                if (slide.type === 'interaction-coding') {
+                    renderTrainSlots('sticker-train-container', true);
+                    updateToolDisplay();
+                } else if (slide.type === 'demo-scan') {
+                    renderTrainSlots('scan-demo-container', false);
+                }
+
+                // Fade in
+                contentDiv.classList.remove('opacity-0');
+            }, 300);
+        }
+
+        function nextSlide() {
+            if (currentSlideIndex < lessonData.length - 1) {
+                currentSlideIndex++;
+                renderSlide(currentSlideIndex);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                renderSlide(currentSlideIndex);
+            }
+        }
+
+        function toggleScript() {
+            const scriptDiv = document.getElementById('teacher-script-container');
+            const icon = document.getElementById('script-toggle-icon');
+            if (scriptDiv.classList.contains('hidden')) {
+                scriptDiv.classList.remove('hidden');
+                icon.innerText = '▲';
+            } else {
+                scriptDiv.classList.add('hidden');
+                icon.innerText = '▼';
+            }
+        }
+
+        // --- Interaction Logic: Quiz ---
+        function playQuiz() {
+            const display = document.getElementById('quiz-display');
+            display.innerHTML = '<span class="text-6xl animate-spin">🎲</span>';
+            
+            setTimeout(() => {
+                const symbols = [
+                    { char: '⭐', color: 'text-yellow-400', action: '반짝반짝! (손 흔들기)' },
+                    { char: '●', color: 'text-red-500', action: '짝! (박수)' },
+                    { char: '▲', color: 'text-blue-500', action: '쿵! (발 구르기)' }
+                ];
+                const rand = symbols[Math.floor(Math.random() * symbols.length)];
+                
+                display.innerHTML = `
+                    <div class="flex flex-col items-center animate-bounce-custom">
+                        <span class="text-8xl ${rand.color} drop-shadow-md">${rand.char}</span>
+                        <span class="text-xl font-bold mt-4 text-gray-700">${rand.action}</span>
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        // --- Interaction Logic: Sticker Coding (Train) ---
+        function setStickerTool(symbol) {
+            selectedStickerTool = symbol;
+            updateToolDisplay();
+        }
+
+        function updateToolDisplay() {
+            const display = document.getElementById('current-tool-display');
+            if (!display) return;
+            
+            if (selectedStickerTool) {
+                display.innerHTML = `선택된 도구: <span class="text-2xl">${selectedStickerTool}</span> (클릭하여 기차에 넣으세요)`;
+            } else {
+                display.innerHTML = `선택된 도구: <span class="text-gray-500">지우개</span> (클릭하여 지우세요)`;
+            }
+        }
+
+        function renderTrainSlots(containerId, isInteractive) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+
+            stickerTrainState.forEach((val, idx) => {
+                const slot = document.createElement('div');
+                // Styling for the train car
+                slot.className = `w-16 h-20 bg-white border-2 border-gray-300 rounded-lg flex items-center justify-center text-3xl shadow-sm train-car relative`;
+                if (!isInteractive) { // Dark mode for demo train
+                    slot.className = `w-16 h-20 bg-gray-700 border-2 border-gray-600 rounded-lg flex items-center justify-center text-3xl shadow-sm relative`;
+                }
+
+                // Car Number
+                const num = document.createElement('span');
+                num.innerText = idx + 1;
+                num.className = "absolute top-1 left-2 text-xs text-gray-400";
+                slot.appendChild(num);
+
+                // Connector
+                if (idx < 7) {
+                    const connector = document.createElement('div');
+                    connector.className = "absolute -right-3 top-1/2 w-4 h-1 bg-gray-400 z-0";
+                    // Only append if not the last one, handled via CSS spacing usually but visual here
+                }
+
+                // Content
+                const contentSpan = document.createElement('span');
+                if (val === '⭐') { contentSpan.innerText = '⭐'; contentSpan.className = "text-yellow-400 drop-shadow-sm"; }
+                else if (val === '●') { contentSpan.innerText = '●'; contentSpan.className = "text-red-500 drop-shadow-sm"; }
+                else if (val === '▲') { contentSpan.innerText = '▲'; contentSpan.className = "text-blue-500 drop-shadow-sm"; }
+                slot.appendChild(contentSpan);
+
+                // Interaction
+                if (isInteractive) {
+                    slot.onclick = () => {
+                        stickerTrainState[idx] = selectedStickerTool;
+                        renderTrainSlots(containerId, true); // Re-render to show change
+                    };
+                } else {
+                    slot.id = `scan-slot-${idx}`; // ID for animation
+                }
+
+                container.appendChild(slot);
+            });
+        }
+
+        // --- Interaction Logic: Scanning Demo ---
+        function startScanning() {
+            let index = 0;
+            const interval = setInterval(() => {
+                // Clear previous highlights
+                for (let i = 0; i < 8; i++) {
+                    const slot = document.getElementById(`scan-slot-${i}`);
+                    if (slot) slot.classList.remove('active-scan');
+                }
+
+                if (index >= 8) {
+                    clearInterval(interval);
+                    return;
+                }
+
+                // Highlight current
+                const currentSlot = document.getElementById(`scan-slot-${index}`);
+                if (currentSlot) {
+                    currentSlot.classList.add('active-scan');
+                    
+                    // Simple sound effect visualization (pulse) if item exists
+                    if (stickerTrainState[index]) {
+                        currentSlot.classList.add('pulse-effect');
+                        setTimeout(() => currentSlot.classList.remove('pulse-effect'), 500);
+                    }
+                }
+                
+                index++;
+            }, 800); // Speed of scanning
+        }
+
+    </script>
+</body>
+</html>
